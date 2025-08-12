@@ -164,6 +164,68 @@ def read_stdin():
         sys.exit(1)
 
 
+def list_models(detailed=True):
+    """List all available OpenRouter models."""
+    try:
+        response = requests.get("https://openrouter.ai/api/v1/models")
+        response.raise_for_status()
+        
+        models_data = response.json()
+        if 'data' in models_data:
+            models = models_data['data']
+        else:
+            models = models_data  # Fallback if response format is different
+        
+        if detailed:
+            print(f"Available OpenRouter Models ({len(models)} total):")
+            print("=" * 60)
+            
+            for model in models:
+                model_id = model.get('id', 'Unknown')
+                name = model.get('name', 'Unknown')
+                context_length = model.get('context_length', 'Unknown')
+                
+                # Get pricing info
+                pricing = model.get('pricing', {})
+                prompt_price = pricing.get('prompt', '0')
+                completion_price = pricing.get('completion', '0')
+                
+                # Format pricing (convert to more readable format)
+                try:
+                    prompt_cost = f"${float(prompt_price) * 1000:.4f}/1K"
+                    completion_cost = f"${float(completion_price) * 1000:.4f}/1K"
+                except (ValueError, TypeError):
+                    prompt_cost = "N/A"
+                    completion_cost = "N/A"
+                
+                print(f"ID: {model_id}")
+                print(f"Name: {name}")
+                print(f"Context: {context_length} tokens")
+                print(f"Pricing: {prompt_cost} prompt, {completion_cost} completion")
+                
+                # Add description if available and not too long
+                description = model.get('description', '')
+                if description and len(description) <= 100:
+                    print(f"Description: {description}")
+                elif description:
+                    print(f"Description: {description[:97]}...")
+                
+                print("-" * 60)
+        else:
+            # Simple list of model IDs only
+            print(f"Available OpenRouter Models ({len(models)} total):")
+            for model in models:
+                model_id = model.get('id', 'Unknown')
+                print(model_id)
+            
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching models from OpenRouter API: {e}")
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        print(f"Error parsing models response: {e}")
+        sys.exit(1)
+
+
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -182,8 +244,19 @@ Examples:
     parser.add_argument('-p', '--prompt', help='Custom prompt for analysis')
     parser.add_argument('-m', '--model', help='Override the model specified in config')
     parser.add_argument('-t', '--temperature', type=float, help='Override the temperature setting (0.0-1.0)')
+    parser.add_argument('--list-models', action='store_true', help='List all available OpenRouter model names')
+    parser.add_argument('--list-models-with-details', action='store_true', help='List all available OpenRouter models with detailed information')
     
     args = parser.parse_args()
+    
+    # Handle --list-models commands
+    if args.list_models:
+        list_models(detailed=False)
+        sys.exit(0)
+    
+    if args.list_models_with_details:
+        list_models(detailed=True)
+        sys.exit(0)
     
     # Validate temperature if provided
     if args.temperature is not None and (args.temperature < 0.0 or args.temperature > 1.0):

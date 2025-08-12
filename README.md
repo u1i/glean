@@ -79,6 +79,16 @@ Combining options:
 ./glean.py report.txt -m openai/gpt-4o-mini -t 0.2 -p "What are the main risks mentioned?"
 ```
 
+List available models (names only):
+```bash
+./glean.py --list-models
+```
+
+List available models with detailed information:
+```bash
+./glean.py --list-models-with-details
+```
+
 ## Supported Text Formats
 
 - Plain text (.txt)
