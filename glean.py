@@ -275,12 +275,18 @@ Examples:
             print(f"Warning: File extension '{file_path.suffix}' may not be optimal for text analysis.")
         text = read_text_file(args.file)
     else:
-        # Read from stdin
+        # Check if we have stdin input or if we can run prompt-only
         if sys.stdin.isatty():
-            print("Error: No file provided and no input from stdin.")
-            print("Usage: glean.py <file> or echo 'text' | glean.py")
-            sys.exit(1)
-        text = read_stdin()
+            # Interactive terminal - check if we have a custom prompt for prompt-only mode
+            if args.prompt:
+                text = ""  # Empty text, will use prompt-only mode
+            else:
+                print("Error: No file provided and no input from stdin.")
+                print("Usage: glean.py <file> or echo 'text' | glean.py or glean.py -p 'prompt'")
+                sys.exit(1)
+        else:
+            # Read from stdin (piped input)
+            text = read_stdin()
     
     # Initialize analyzer and process text
     analyzer = GleanAnalyzer(config)
