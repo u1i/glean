@@ -9,6 +9,8 @@ import configparser
 import json
 import os
 import sys
+import time
+import tempfile
 import requests
 from pathlib import Path
 
@@ -164,13 +166,77 @@ def read_stdin():
         sys.exit(1)
 
 
-def list_models(detailed=True):
-    """List all available OpenRouter models."""
+def get_cache_file_path():
+    """Get the path for the models cache file."""
+    return os.path.join(tempfile.gettempdir(), 'glean_models_cache.json')
+
+
+def is_cache_valid(cache_file_path, max_age_hours=6):
+    """Check if the cache file exists and is not older than max_age_hours."""
+    if not os.path.exists(cache_file_path):
+        return False
+    
+    file_age = time.time() - os.path.getmtime(cache_file_path)
+    max_age_seconds = max_age_hours * 3600
+    return file_age < max_age_seconds
+
+
+def load_models_from_cache(cache_file_path):
+    """Load models data from cache file."""
+    try:
+        with open(cache_file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return None
+
+
+def save_models_to_cache(models_data, cache_file_path):
+    """Save models data to cache file."""
+    try:
+        with open(cache_file_path, 'w', encoding='utf-8') as f:
+            json.dump(models_data, f)
+    except IOError:
+        # If we can't write to cache, just continue without caching
+        pass
+
+
+def fetch_models_data():
+    """Fetch models data from API or cache."""
+    cache_file_path = get_cache_file_path()
+    
+    # Try to load from cache first
+    if is_cache_valid(cache_file_path):
+        cached_data = load_models_from_cache(cache_file_path)
+        if cached_data is not None:
+            return cached_data
+    
+    # Cache miss or invalid - fetch from API
     try:
         response = requests.get("https://openrouter.ai/api/v1/models")
         response.raise_for_status()
         
         models_data = response.json()
+        
+        # Save to cache
+        save_models_to_cache(models_data, cache_file_path)
+        
+        return models_data
+        
+    except requests.exceptions.RequestException as e:
+        # If API fails, try to load from cache even if expired
+        cached_data = load_models_from_cache(cache_file_path)
+        if cached_data is not None:
+            print(f"Warning: API request failed, using cached data: {e}")
+            return cached_data
+        else:
+            raise e
+
+
+def list_models(detailed=True):
+    """List all available OpenRouter models."""
+    try:
+        models_data = fetch_models_data()
+        
         if 'data' in models_data:
             models = models_data['data']
         else:
@@ -218,11 +284,8 @@ def list_models(detailed=True):
                 model_id = model.get('id', 'Unknown')
                 print(model_id)
             
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching models from OpenRouter API: {e}")
-        sys.exit(1)
-    except json.JSONDecodeError as e:
-        print(f"Error parsing models response: {e}")
+    except Exception as e:
+        print(f"Error fetching models: {e}")
         sys.exit(1)
 
 
