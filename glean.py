@@ -12,7 +12,11 @@ import sys
 import time
 import tempfile
 import requests
+import urllib3
 from pathlib import Path
+
+# Suppress SSL warnings when verify=False is used
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class GleanConfig:
@@ -24,6 +28,7 @@ class GleanConfig:
         self.model = 'google/gemini-2.0-flash-exp'  # Default model
         self.temperature = 0.4  # Default temperature
         self.system_prompt = None  # Optional system prompt
+        self.http_proxy = None  # Optional HTTP proxy
         
     def load_config(self):
         """Load configuration from ~/.glean_cfg file."""
@@ -59,6 +64,8 @@ class GleanConfig:
                     print("Warning: Invalid temperature value in config. Using default 0.4")
             if 'system_prompt' in openrouter_section:
                 self.system_prompt = openrouter_section['system_prompt']
+            if 'http_proxy' in openrouter_section:
+                self.http_proxy = openrouter_section['http_proxy']
                     
         except Exception as e:
             print(f"Error reading configuration file: {e}")
@@ -104,7 +111,9 @@ Please be thorough but concise in your analysis."""
         # Prepare API request
         headers = {
             "Authorization": f"Bearer {self.config.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "X-Title": "glean",
+            "HTTP-Referer": "https://github.com/u1i/glean"
         }
         
         # Prepare messages array
@@ -125,8 +134,16 @@ Please be thorough but concise in your analysis."""
             "temperature": temperature
         }
         
+        # Prepare proxy settings if configured
+        proxies = {}
+        if self.config.http_proxy:
+            proxies = {
+                'http': self.config.http_proxy,
+                'https': self.config.http_proxy
+            }
+        
         try:
-            response = requests.post(self.api_url, headers=headers, json=data)
+            response = requests.post(self.api_url, headers=headers, json=data, proxies=proxies, verify=False)
             response.raise_for_status()
             
             result = response.json()
@@ -212,6 +229,7 @@ def fetch_models_data():
     
     # Cache miss or invalid - fetch from API
     try:
+        # Note: Model listing endpoint doesn't need proxy since it's public and doesn't require auth
         response = requests.get("https://openrouter.ai/api/v1/models")
         response.raise_for_status()
         

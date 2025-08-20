@@ -29,9 +29,10 @@ api_key = your_api_key_here
 model = google/gemini-2.0-flash-exp
 temperature = 0.4  # Controls randomness (0.0 to 1.0, lower is more deterministic)
 system_prompt = You are a helpful assistant.  # Optional system prompt for all requests
+http_proxy = http://localhost:8888  # Optional HTTP proxy for API requests
 ```
 
-Only the API key is mandatory. If model, temperature, or system_prompt are not specified, default values will be used (no system prompt by default).
+Only the API key is mandatory. If model, temperature, system_prompt, or http_proxy are not specified, default values will be used (no system prompt or proxy by default).
 
 ## Project Structure
 
