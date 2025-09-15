@@ -90,6 +90,34 @@ List available models with detailed information:
 ./glean.py --list-models-with-details
 ```
 
+## Shell Script Usage
+
+When using Glean in shell scripts, be aware that it captures stdin. For processing multiple prompts or files, you need to redirect stdin appropriately:
+
+```bash
+#!/bin/bash
+
+# Single prompt in a script
+./glean.py -p "Analyze this data" < /dev/null
+
+# Process multiple prompts from a file (handles prompts with spaces)
+while read -r p; do 
+    ./glean.py -p "$p" < /dev/null
+done < prompts.txt
+
+# Process multiple files with the same prompt
+for file in *.txt; do
+    ./glean.py "$file" -p "Summarize this document" < /dev/null
+done
+
+# Combine with other commands (redirect stdin to avoid conflicts)
+echo "Processing files..." | while read -r line; do
+    ./glean.py -p "What is the main topic?" < /dev/null
+done
+```
+
+**Important:** Always use `< /dev/null` when calling Glean in loops or scripts to prevent it from consuming stdin that should be used by the loop itself.
+
 ## Supported Text Formats
 
 - Plain text (.txt)
