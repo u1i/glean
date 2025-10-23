@@ -1,6 +1,8 @@
 # Glean
 
-A command-line tool for analyzing text using OpenRouter API with language models. Sister project to [Glimpse](https://github.com/u1i/glimpse) for images.
+A command-line tool for analyzing text using OpenRouter API with language models.
+
+3G-CLI Suite: [Glean](https://github.com/u1i/glean) (text analysis) | [Glimpse](https://github.com/u1i/glimpse) (image analysis) | [Graft](https://github.com/u1i/graft) (image generation and editing)
 
 ## Installation
 
